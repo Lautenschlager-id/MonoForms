@@ -1,0 +1,9 @@
+*.vs
+*.sln
+MonoForms/MonoForms/obj/
+MonoForms/MonoForms/bin/
+MonoForms/MonoFormsContent/obj/
+MonoForms/MonoFormsContent/bin/
+*.contentproj
+Properties/
+*.csproj

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<XnaContent xmlns:Graphics="Microsoft.Xna.Framework.Content.Pipeline.Graphics">
+  <Asset Type="Graphics:FontDescription">
+    <FontName>Verdana</FontName>
+    <Size>8</Size>
+    <Spacing>0</Spacing>
+    <UseKerning>true</UseKerning>
+    <Style>Regular</Style>
+
+    <DefaultCharacter>?</DefaultCharacter>
+
+    <CharacterRegions>
+      <CharacterRegion>
+        <Start>&#9650;</Start>
+        <End>&#9650;</End>
+      </CharacterRegion>
+      <CharacterRegion>
+        <Start>&#9660;</Start>
+        <End>&#9660;</End>
+      </CharacterRegion>
+      <CharacterRegion>
+        <Start>&#9679;</Start>
+        <End>&#9679;</End>
+      </CharacterRegion>
+      <CharacterRegion>
+        <Start>&#10004;</Start>
+        <End>&#10004;</End>
+      </CharacterRegion>
+    </CharacterRegions>
+  </Asset>
+</XnaContent>
