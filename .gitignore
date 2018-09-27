@@ -7,3 +7,4 @@ MonoForms/MonoFormsContent/bin/
 *.contentproj
 Properties/
 *.csproj
+*.cachefile

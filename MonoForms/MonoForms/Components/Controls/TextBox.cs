@@ -9,10 +9,6 @@ namespace MonoForms
     class TextBox : Control
     {
         /* TODO
-         * Pointer sometimes is too far
-         * Fix password (out of the control)
-         * ctrl z
-         * ctrl y
          * ctrl c - another handler
          * ctrl x
          * ctrl a
@@ -60,13 +56,8 @@ namespace MonoForms
                 base.Selected = value;
 
                 if (!value)
-                {
-                    PointerLine = Lines.Length - 1;
-                    PointerLocale = Lines[pointerLine].Length - 1;
-
                     if (pointerDisplay != null)
                         pointerDisplay.Text = "";
-                }
             }
         }
 
@@ -80,7 +71,7 @@ namespace MonoForms
                     label.Size = base.Size;
 
                 if (pointerDisplay != null)
-                    pointerDisplay.Location = base.Size;
+                    pointerDisplay.Size = base.Size;
             }
         }
 
@@ -91,15 +82,16 @@ namespace MonoForms
             {
                 label.Text = value;
 
+                if (history.Count == 0 || value != history[Math.Max(0, history.Count - 2)])
+                    history.Add(value);
+
                 int size = Math.Max(0, label.Text.Length - 1);
                 if (pointerLocale == 0 || pointerLocale + 1 == size)
-                    increasePointer();
+                    movePointer(1);
 
                 TextChanged?.Invoke(this, new MonoValueEventArg(label.Text));
 
-                // IMPORTANT @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-                if (UseSystemPassword)
-                    label.DisplayedText = PasswordChar.ToString().Repeat(label.DisplayedText.Length);
+                textToPassword(); // there's an if inside the method
             }
         }
         #endregion
@@ -162,6 +154,10 @@ namespace MonoForms
         private int defaultPointerSpeed;
 
         private Dictionary<Keys, float> holdingKeys = new Dictionary<Keys, float>();
+
+        private List<string> history = new List<string>();
+
+        private List<string> redoHistory = new List<string>();
 
         private Keys[] holdingKeysList
         {
@@ -264,28 +260,28 @@ namespace MonoForms
                     holdingKeys.Remove(keyList[i]);
 
             // Pointer
-            if (Selected && --pointerSpeed == 0)
+            if (Selected && --pointerSpeed <= 0)
             {
                 pointerSpeed = defaultPointerSpeed;
 
-                string textSlice = Text.Substring(0, pointerLocale) + (pointerLocale == 0 ? " " : "  ");
+                string textSlice = Text.Substring(0, Math.Min(pointerLocale, Text.Length)) + (pointerLocale == 0 ? " " : "  ");
                 float sliceSize = Math.Max(1, (int)Font.SpriteFont.MeasureString(textSlice).X); // >= 0
 
                 float spaceSize = (int)Font.SpriteFont.MeasureString(" ").X;
                 string spaces = (" ").Repeat((int)(sliceSize / spaceSize));
 
-                pointerDisplay.Text = spaces + (pointerDisplay.Text.Contains("|") ? "" : "|");
+                pointerDisplay.Text = spaces + (defaultPointerSpeed == 0 ? "|" : (pointerDisplay.Text.Contains("|") ? "" : "|"));
             }
         }
 
         #region Methods
-        private int decreasePointer()
+        private int movePointer(int p)
         {
             int oldPointerLocale = PointerLocale;
-            PointerLocale--;
+            PointerLocale += p;
 
             if (oldPointerLocale == PointerLocale)
-                PointerLine--;
+                PointerLine += p;
 
             return PointerLocale;
         }
@@ -321,7 +317,7 @@ namespace MonoForms
                     {
                         Text = Text.Remove(PointerLocale, 1);
 
-                        decreasePointer();
+                        movePointer(-1);
                     }
 
                     return;
@@ -348,7 +344,7 @@ namespace MonoForms
             else if (key == Keys.Left)
             {
                 int oldPointer = PointerLocale;
-                decreasePointer();
+                movePointer(-1);
 
                 if (shift)
                 {
@@ -383,7 +379,7 @@ namespace MonoForms
             else if (key == Keys.Right)
             {
                 int oldPointer = PointerLocale;
-                increasePointer();
+                movePointer(1);
 
                 if (shift)
                 {
@@ -440,6 +436,28 @@ namespace MonoForms
                     Text += System.Windows.Forms.Clipboard.GetText();
                     return;
                 }
+                else if (Input.KeyDown(Keys.Z)) // CTRL + Z
+                {
+                    int index = Math.Max(history.Count - 2, 0);
+                    Text = (history.Count > 1 ? history[index] : string.Empty);
+                    if (history.Count > 0)
+                    {
+                        redoHistory.Add(history[index]);
+                        history.RemoveAt(index);
+                    }
+                    return;
+                }
+                else if (Input.KeyDown(Keys.Y)) // CTRL + Y
+                {
+                    // Undo e Redo functions are bad coded, indeed.
+                    if (redoHistory.Count > 0)
+                    {
+                        int index = Math.Max(redoHistory.Count - 2, 0);
+                        Text = redoHistory[index];
+                        redoHistory.RemoveAt(index);
+                    }
+                    return;
+                }
             }
 
             bool ctrlAlt = false;
@@ -450,18 +468,19 @@ namespace MonoForms
                 if (!ctrlAlt)
                     if (Array.IndexOf(DisabledKeys, Keys.RightAlt) == -1)
                         ctrlAlt = Input.HoldingKey(Keys.RightAlt);
+                if (!ctrlAlt) return;
             }
 
             bool capsLock = Array.IndexOf(DisabledKeys, Keys.CapsLock) == -1 && Console.CapsLock;
 
             // Letters
-            if (key >= Keys.A && key <= Keys.Z)
+            if (key >= Keys.A && key <= Keys.Z && !ctrlAlt)
             {
                 string keyValue = key.ToString();
                 insert((shift ? (capsLock ? keyValue.ToLower() : keyValue) : (capsLock ? keyValue : keyValue.ToLower())));
             }
             // Numpad numbers
-            else if (key >= Keys.NumPad0 && key <= Keys.NumPad9)
+            else if (key >= Keys.NumPad0 && key <= Keys.NumPad9 && !ctrlAlt)
                 insert(((int)key - 96).ToString());
             // Keyboard numbers
             else if (key >= Keys.D0 && key <= Keys.D9)
@@ -520,21 +539,10 @@ namespace MonoForms
             }
         }
 
-        private int increasePointer()
-        {
-            int oldPointerLocale = PointerLocale;
-            PointerLocale++;
-
-            if (oldPointerLocale == PointerLocale)
-                PointerLine++;
-
-            return PointerLocale;
-        }
-
         private void insert(string value)
         {
             // Adds the character in the given position of the pointer
-            Text = Text.Insert(Text.Length == 0 ? 0 : (increasePointer() + 1), value);
+            Text = Text.Insert(Text.Length == 0 ? 0 : (movePointer(1) + 1), value);
         }
 
         private int lineLength()

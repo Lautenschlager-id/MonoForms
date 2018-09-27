@@ -165,8 +165,8 @@ namespace MonoForms
 
                 textBox = new TextBox()
                 {
-                    Location = new Vector2(20, 360),
-                    AcceptsTab = true
+                    Size = new Vector2(200, 20),
+                    Location = new Vector2(20, 360)
                 };
             }
 
